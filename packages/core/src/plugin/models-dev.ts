@@ -2,6 +2,7 @@ import { define } from "./internal"
 import type { ModelV2Info } from "@opencode-ai/sdk/v2/types"
 import { Effect, Stream } from "effect"
 import { Catalog } from "../catalog"
+import { Config } from "../config"
 import { EventV2 } from "../event"
 import { ModelV2 } from "../model"
 import { ModelsDev } from "../models-dev"
@@ -158,6 +159,7 @@ function record(item: ModelsDev.Provider): Catalog.ProviderRecord {
 export const ModelsDevPlugin = define({
   id: "models-dev",
   effect: Effect.fn(function* (ctx) {
+    const config = yield* Config.Service
     const modelsDev = yield* ModelsDev.Service
     const events = yield* EventV2.Service
     const catalogService = yield* Catalog.Service
@@ -181,7 +183,12 @@ export const ModelsDevPlugin = define({
     )
     yield* catalogService.transform(
       Effect.fn(function* (catalog) {
-        catalog.seed(Object.values(yield* modelsDev.get()).map(record))
+        const filter = config.providerFilter
+        catalog.seed(
+          Object.values(yield* modelsDev.get())
+            .filter((item) => (!filter?.enabled || filter.enabled.has(item.id)) && !filter?.disabled.has(item.id))
+            .map(record),
+        )
       }),
     )
     yield* events.subscribe(ModelsDev.Event.Refreshed).pipe(
