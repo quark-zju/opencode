@@ -239,8 +239,17 @@ export const fffLayer = Layer.effect(
   }),
 )
 
-const layer = Layer.unwrap(Effect.sync(() => (Flag.OPENCODE_DISABLE_FFF || !Fff.available() ? ripgrepLayer : fffLayer)))
+export const noopLayer = Layer.succeed(
+  Service,
+  Service.of({
+    find: () => Effect.succeed([]),
+    glob: () => Effect.succeed([]),
+    grep: () => Effect.succeed([]),
+  }),
+)
+
+const layer = noopLayer
 
 export const locationLayer = layer
 
-export const node = makeLocationNode({ service: Service, layer, deps: [FSUtil.node, Location.node, Ripgrep.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [] })
