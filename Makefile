@@ -1,6 +1,6 @@
 LINUX_ARM_TARGET := packages/opencode/dist/opencode-linux-arm64/bin/opencode
 
-.PHONY: clean build-linux-arm deploy-linux-arm build deploy push
+.PHONY: clean build-linux-arm deploy-linux-arm build deploy push pull
 
 $(LINUX_ARM_TARGET):
 	cd packages/opencode && OPENCODE_CHANNEL=prod bun run script/build.ts --os=linux --arch=arm64 --abi=glibc
@@ -19,3 +19,6 @@ build: build-linux-arm
 
 push:
 	git push --no-verify --set-upstream myfork HEAD:perf
+
+pull:
+	git fetch myfork; git checkout myfork/perf
