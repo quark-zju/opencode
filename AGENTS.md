@@ -1,3 +1,17 @@
+This repo (forked) instructions:
+
+This repo is to aggressively fix opencode performance issues (see the head of README.md for background).
+Some changes will break features, not suitable for upstreaming. So, sometimes no need to add new tests.
+
+To reduce changes of conflicts:
+- Avoid deleting large chunk of code. Try return early (dead code after return is okay). Try use block comment to comment out logic.
+- Avoid indentation changes unless absolutely necessary.
+- Avoid renaming variables.
+
+----
+
+Upstream instructions:
+
 - To regenerate the legacy JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit `src/generated` or `src/generated-effect` directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk-next` composes Client, Core, and Server.
