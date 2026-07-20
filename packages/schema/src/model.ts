@@ -86,21 +86,20 @@ export const Info = Schema.Struct({
 })
   .annotate({ identifier: "ModelV2.Info" })
   .pipe(
-    statics((schema) => ({
-      empty: (providerID: Provider.ID, modelID: ID) =>
-        schema.make({
-          id: modelID,
-          providerID,
-          name: modelID,
-          api: { id: modelID, type: "native", settings: {} },
-          capabilities: { tools: false, input: [], output: [] },
-          request: { headers: {}, body: {} },
-          variants: [],
-          time: { released: 0 },
-          cost: [],
-          status: "active",
-          enabled: true,
-          limit: { context: 0, output: 0 },
-        }),
+    statics(() => ({
+      empty: (providerID: Provider.ID, modelID: ID): Info => ({
+        id: modelID,
+        providerID,
+        name: modelID,
+        api: { id: modelID, type: "native", settings: {} },
+        capabilities: { tools: false, input: [], output: [] },
+        request: { headers: {}, body: {} },
+        variants: [],
+        time: { released: 0 },
+        cost: [],
+        status: "active",
+        enabled: true,
+        limit: { context: 0, output: 0 },
+      }),
     })),
   )
