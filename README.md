@@ -1,3 +1,9 @@
+This repo contains changes I make to `opencode` to make it run faster on a slow device. Some of the changes might break features to gain performance.
+
+背景：我在 Orange Pi 上运行 `opencode web`，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开新 project 时感觉很慢（可能有 10 秒钟），比 `kimi web`（也在同一设备的沙箱内）慢很多。strace 发现 opencode 可能有一些性能上不合理的地方，比如全 project 扫文件，多次跑没有太大意义的 git 命令等。当前 repo 可能采用比较激进的手段优化在慢系统上的性能。修改也不一定适合上游。
+
+---
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>
