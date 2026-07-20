@@ -45,6 +45,7 @@ export const ripgrepLayer = Layer.effect(
               const directory = parts.slice(0, index + 1).join("/") + path.sep
               if (directories.has(directory)) return
               directories.add(directory)
+              // Keep the searchable array incremental instead of rebuilding it for every entry.
               state.directories.push(directory)
             })
           }),
