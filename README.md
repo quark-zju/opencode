@@ -1,6 +1,11 @@
-This repo contains changes I make to `opencode` to make it run faster on a slow device. Some of the changes might break features to gain performance.
+This repo includes some performance optimizations so project loading in a Raspberry Pi hosted `opencode web` reduces from 6s to 1s. Performance issues were detected by [bun CPU profiling](https://bun.com/docs/project/benchmarking#cpu-profiling) and strace.
 
-背景：我在 Orange Pi 上运行 `opencode web`，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开新 project 时感觉很慢（可能有 10 秒钟），比 `kimi web`（也在同一设备的沙箱内）慢很多。strace 发现 opencode 可能有一些性能上不合理的地方，比如全 project 扫文件，多次跑没有太大意义的 git 命令等。当前 repo 可能采用比较激进的手段优化在慢系统上的性能。修改也不一定适合上游。
+- Removes some ripgreps. Note: this breaks fuzzy path match in "Add project" dialog, and in `@` file list completion. Makes "Add project" much more responsive, and saves ~0.4s per project.
+- Replace some `git` commands with reading `.git` files directly. Saves ~1s.
+- Disable GitHub Copilot if it's not enabled. Saves ~0.7s downloading `api.githubcopilot.com/models`.
+- Filter the giant list `models.dev` by `enabled_providers`, and process the list more efficiently. Saves ~2.6s.
+
+背景：我在 Orange Pi 上运行 `opencode web`，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开未缓存的新项目时感觉很慢（可能有 10 秒钟），比 `kimi web`（也在同一设备的沙箱内）慢很多。strace 发现 opencode 可能有一些性能上不合理的地方，比如全项目或者全用户扫文件，多次跑没有太大意义的 git 命令等。本 repo 可能采用比较激进的手段优化在慢系统上的性能。修改也不一定适合上游。
 
 ---
 
