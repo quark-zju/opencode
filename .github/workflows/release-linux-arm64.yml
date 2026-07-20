@@ -1,0 +1,46 @@
+name: release linux arm64
+run-name: "release linux arm64 v${{ inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the v prefix"
+        required: true
+        type: string
+
+concurrency:
+  group: release-linux-arm64-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Build Linux ARM64 glibc
+        run: ./packages/opencode/script/build.ts --os=linux --arch=arm64 --abi=glibc
+        env:
+          OPENCODE_VERSION: ${{ inputs.version }}
+
+      - name: Package release asset
+        run: tar -czf packages/opencode/dist/opencode-linux-arm64.tar.gz -C packages/opencode/dist/opencode-linux-arm64/bin .
+
+      - name: Create GitHub release
+        run: |
+          gh release create "v$RELEASE_VERSION" packages/opencode/dist/opencode-linux-arm64.tar.gz \
+            --target "$GITHUB_SHA" \
+            --title "v$RELEASE_VERSION" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.version }}
