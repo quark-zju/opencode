@@ -128,7 +128,10 @@ const layer = Layer.effect(
             Effect.map((chunk) => [...chunk]),
           )
           const truncated = rows.length > input.limit
-          if (truncated) return { items: rows.slice(0, input.limit), truncated, partial: false }
+          if (truncated) {
+            yield* handle.kill().pipe(Effect.ignore)
+            return { items: rows.slice(0, input.limit), truncated, partial: false }
+          }
 
           const code = yield* handle.exitCode
           const stderr = yield* Fiber.join(stderrFiber)
