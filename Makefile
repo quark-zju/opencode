@@ -11,7 +11,7 @@ clean:
 	rm -f $(LINUX_ARM_TARGET)
 
 deploy-linux-arm: $(LINUX_ARM_TARGET)
-	HOST=$$(grep -A1 '# opencode' ~/.ssh/config | tail -1 | sed 's/Host *//') && scp $^ $$HOST:/usr/local/bin/opencode && ssh $$HOST 'systemctl restart opencode'
+	HOST=$$(grep -A1 '# opencode' ~/.ssh/config | tail -1 | sed 's/Host *//') && rsync --archive --compress $^ $$HOST:/usr/local/bin/opencode && ssh $$HOST 'systemctl restart opencode'
 
 deploy: deploy-linux-arm
 
