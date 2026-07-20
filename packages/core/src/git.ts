@@ -189,6 +189,31 @@ const layer = Layer.effect(
       if (!dotgit) return undefined
 
       const cwd = path.dirname(dotgit)
+      if (yield* fs.isDir(dotgit).pipe(Effect.orElseSucceed(() => false))) {
+        return new Repository({
+          worktree: AbsolutePath.make(cwd),
+          gitDirectory: AbsolutePath.make(dotgit),
+          commonDirectory: AbsolutePath.make(dotgit),
+        })
+      }
+
+      {
+        // e.g. gitdir: /repo/.git/worktrees/foo
+        const content = yield* fs.readFileStringSafe(dotgit).pipe(Effect.orElseSucceed(() => undefined))
+        const relDir = content?.match(/^gitdir:\s*(.+)$/m)?.[1]?.trim()
+        if (!relDir) return undefined
+        // e.g. /repo/.git/worktrees/foo
+        const gitDir = resolvePath(cwd, relDir)
+        // e.g. /repo/.git
+        const commonDir = gitDir.replace(/(\/|^)\.git\/.*$/, "$1.git")
+        if (!commonDir) return undefined
+        return new Repository({
+          worktree: AbsolutePath.make(cwd),
+          gitDirectory: AbsolutePath.make(gitDir),
+          commonDirectory: AbsolutePath.make(commonDir),
+        })
+      }
+
       const git = run(cwd, proc)
       const topLevel = yield* git(["rev-parse", "--show-toplevel"])
       const gitDir = yield* git(["rev-parse", "--git-dir"])
