@@ -252,4 +252,17 @@ const layer = noopLayer
 
 export const locationLayer = layer
 
+// This noopLayer removes rg scan on project load.
+// 打开 project / 请求 location endpoint
+//  → LocationServiceMap.get(directory)
+//  → 编译完整 locationServices
+//  → 构造 FileSystemSearch.node
+//  → FFF 不可用时选择 ripgrepLayer
+//  → ripgrep.find({ pattern: "*" })
+//  → spawn:
+//      rg --no-config --files --glob=!**/.git/** .
+//  → 后台遍历整个 project
+//
+// It affects `/find`, `@`, but does not affect web "Add project"
+// path completion, or the `Grep` tool.
 export const node = makeLocationNode({ service: Service, layer, deps: [] })
