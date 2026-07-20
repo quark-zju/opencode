@@ -1,4 +1,4 @@
-This repo includes some performance optimizations so project loading in a Raspberry Pi hosted `opencode web` reduces from 6s to 1s. Performance issues were detected by [bun CPU profiling](https://bun.com/docs/project/benchmarking#cpu-profiling) and strace.
+This repo includes some performance optimizations so project loading time with a Raspberry Pi hosted `opencode web` server reduces from 6s to 1s. Performance issues were detected by [bun CPU profiling](https://bun.com/docs/project/benchmarking#cpu-profiling) and strace.
 
 - Removes some ripgreps. Note: this breaks fuzzy path match in "Add project" dialog, and in `@` file list completion. Makes "Add project" much more responsive, and saves ~0.4s per project.
 - Replace some `git` commands with reading `.git` files directly. Saves ~1s.
