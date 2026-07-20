@@ -108,6 +108,7 @@ export interface Interface {
 export class Service extends Context.Service<Service, Interface>()("@opencode/ProjectCopy") {}
 
 export const refreshAfterBoot = Effect.gen(function* () {
+  return
   const location = yield* Location.Service
   const copies = yield* Service
   yield* Effect.gen(function* () {
