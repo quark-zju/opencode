@@ -7,8 +7,6 @@ import { Effect, Layer, Context, Schema } from "effect"
 import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
-import PROMPT_INITIALIZE from "./template/initialize.txt"
-import PROMPT_REVIEW from "./template/review.txt"
 import { LegacyEvent } from "@opencode-ai/schema/legacy-event"
 
 type State = {
@@ -67,6 +65,7 @@ const layer = Layer.effect(
       const bridge = yield* EffectBridge.make()
       const commands: Record<string, Info> = {}
 
+      /*
       commands[Default.INIT] = {
         name: Default.INIT,
         description: "guided AGENTS.md setup",
@@ -86,6 +85,7 @@ const layer = Layer.effect(
         subtask: true,
         hints: hints(PROMPT_REVIEW),
       }
+      */
 
       for (const [name, command] of Object.entries(cfg.command ?? {})) {
         commands[name] = {
