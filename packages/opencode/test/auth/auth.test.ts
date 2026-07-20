@@ -3,6 +3,8 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect } from "effect"
 import { Auth } from "../../src/auth"
 import { testEffect } from "../lib/effect"
+import { Global } from "@opencode-ai/core/global"
+import path from "path"
 
 const it = testEffect(LayerNode.compile(Auth.node))
 
@@ -70,6 +72,24 @@ describe("Auth", () => {
       yield* auth.remove("anthropic")
       const after = yield* auth.all()
       expect(after["anthropic"]).toBeUndefined()
+    }),
+  )
+
+  it.instance("all reloads auth changed outside the service", () =>
+    Effect.gen(function* () {
+      const auth = yield* Auth.Service
+      const before = yield* auth.all()
+      expect(before["external"]).toBeUndefined()
+
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(Global.Path.data, "auth.json"),
+          JSON.stringify({ external: { type: "api", key: "external-key" } }),
+        ),
+      )
+
+      const after = yield* auth.all()
+      expect(after["external"]).toEqual({ type: "api", key: "external-key" })
     }),
   )
 })
