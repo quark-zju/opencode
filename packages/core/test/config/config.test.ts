@@ -209,6 +209,37 @@ describe("Config", () => {
     ),
   )
 
+  it.live("exposes the effective legacy provider filter", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) => {
+        const global = path.join(tmp.path, "global")
+        return Effect.gen(function* () {
+          yield* Effect.promise(async () => {
+            await fs.mkdir(global, { recursive: true })
+            await fs.writeFile(
+              path.join(global, "opencode.json"),
+              JSON.stringify({ enabled_providers: ["anthropic", "openai"], disabled_providers: ["openai"] }),
+            )
+            await fs.writeFile(
+              path.join(tmp.path, "opencode.json"),
+              JSON.stringify({ enabled_providers: ["anthropic", "google"] }),
+            )
+          })
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+
+            expect([...config.providerFilter!.enabled!]).toEqual(["anthropic", "google"])
+            expect([...config.providerFilter!.disabled]).toEqual(["openai"])
+          }).pipe(Effect.provide(testLayer(tmp.path, global)))
+        })
+      }),
+    ),
+  )
+
   it.live("does not load legacy config.json files", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
