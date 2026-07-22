@@ -39,6 +39,7 @@ test("does not persist IME pre-edit text before composition ends", async ({ page
   await page.goto(`/${base64Encode(directory)}/session/${sessionID}`)
   const composer = page.locator('[data-component="prompt-input-v2"]')
   const input = composer.locator('[data-component="prompt-input"]')
+  const placeholder = composer.locator('[data-slot="prompt-input-placeholder"]')
   const send = composer.getByRole("button", { name: "Send" })
   await expectAppVisible(composer)
 
@@ -46,7 +47,10 @@ test("does not persist IME pre-edit text before composition ends", async ({ page
   await input.press("ControlOrMeta+A")
   await input.press("Backspace")
   await expect(input).toBeEmpty()
+  await expect(placeholder).toBeVisible()
   await expect(send).toBeDisabled()
+  const emptyContent = await input.evaluate((element) => getComputedStyle(element, "::before").content)
+  expect(emptyContent).not.toContain("\u200B")
 
   await input.evaluate((element) => {
     element.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }))
@@ -62,6 +66,7 @@ test("does not persist IME pre-edit text before composition ends", async ({ page
   })
 
   await expect(input).toHaveText("sh")
+  await expect(placeholder).toBeHidden()
   await expect(send).toBeDisabled()
 
   await input.evaluate((element) => {
