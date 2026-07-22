@@ -52,9 +52,18 @@ export function PromptInputV2(props: PromptInputV2Props) {
   const view = props.controller.view
   let editor: HTMLDivElement | undefined
   let localInput = false
+  let composing = false
+  let pendingCompositionSync = false
   const updateCursor = () => {
-    if (!editor || !window.getSelection()?.isCollapsed) return
+    if (!editor || composing || !window.getSelection()?.isCollapsed) return
     props.controller.onCursor(promptInputV2Cursor(editor))
+  }
+  const syncEditor = (element: HTMLDivElement) => {
+    const cursor = promptInputV2Cursor(element)
+    const prompt = parsePromptInputV2Editor(element)
+    const images = props.controller.parts().filter((part) => part.type === "image")
+    localInput = true
+    props.controller.onInput(prompt.map((part) => part.content).join(""), [...prompt, ...images], cursor)
   }
   const mode = createMemo(() => state.mode)
   const buttons = createMemo(() => ({
@@ -65,7 +74,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
 
   createEffect(() => {
     const parts = props.controller.parts()
-    if (!editor) return
+    if (!editor || composing) return
     if (localInput) {
       localInput = false
       return
@@ -163,13 +172,26 @@ export function PromptInputV2(props: PromptInputV2Props) {
             class="relative z-10 block min-h-[60px] max-h-[180px] w-full overflow-y-auto whitespace-pre-wrap bg-transparent px-4 pt-4 pb-2 text-[13px] font-[440] leading-5 text-v2-text-text-base focus:outline-none empty:before:content-['\200B'] [&_[data-mention=file]]:text-syntax-property [&_[data-mention=agent]]:text-syntax-type [&_[data-mention=reference]]:text-syntax-keyword"
             classList={{ "font-mono!": state.mode === "shell", "opacity-50": props.disabled }}
             onInput={(event) => {
-              const cursor = promptInputV2Cursor(event.currentTarget)
-              const prompt = parsePromptInputV2Editor(event.currentTarget)
-              const images = props.controller.parts().filter((part) => part.type === "image")
-              localInput = true
-              props.controller.onInput(prompt.map((part) => part.content).join(""), [...prompt, ...images], cursor)
+              if (composing || event.isComposing) return
+              pendingCompositionSync = false
+              syncEditor(event.currentTarget)
+            }}
+            onCompositionStart={() => {
+              composing = true
+              pendingCompositionSync = false
+            }}
+            onCompositionEnd={(event) => {
+              composing = false
+              pendingCompositionSync = true
+              const element = event.currentTarget
+              requestAnimationFrame(() => {
+                if (composing || !pendingCompositionSync) return
+                pendingCompositionSync = false
+                syncEditor(element)
+              })
             }}
             onKeyDown={(event) => {
+              if (composing || event.isComposing || event.keyCode === 229) return
               if (props.controller.onKeyDown(event)) return
               if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
                 event.preventDefault()
