@@ -19,6 +19,7 @@ Correctness fixes:
 
 - Stops duplicated responses when client clock is ahead.
 - Fixes missing responses when client clock is behind.
+- Fixed IME (input method) pre-edit issues.
 
 Context optimization:
 
