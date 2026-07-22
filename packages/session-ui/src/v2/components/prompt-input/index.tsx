@@ -51,14 +51,21 @@ export function PromptInputV2(props: PromptInputV2Props) {
   const state = props.controller.state
   const view = props.controller.view
   let editor: HTMLDivElement | undefined
+  let placeholder: HTMLDivElement | undefined
   let localInput = false
   let composing = false
   let pendingCompositionSync = false
+  const updatePlaceholder = (element: HTMLDivElement) => {
+    if (!placeholder) return
+    const text = (element.textContent ?? "").replace(/[\n\u200B]/g, "")
+    placeholder.hidden = !!text || !!element.querySelector("[data-mention]")
+  }
   const updateCursor = () => {
     if (!editor || composing || !window.getSelection()?.isCollapsed) return
     props.controller.onCursor(promptInputV2Cursor(editor))
   }
   const syncEditor = (element: HTMLDivElement) => {
+    updatePlaceholder(element)
     const cursor = promptInputV2Cursor(element)
     const prompt = parsePromptInputV2Editor(element)
     const images = props.controller.parts().filter((part) => part.type === "image")
@@ -169,9 +176,10 @@ export function PromptInputV2(props: PromptInputV2Props) {
             spellcheck={state.mode === "normal"}
             // @ts-expect-error
             autocomplete="off"
-            class="relative z-10 block min-h-[60px] max-h-[180px] w-full overflow-y-auto whitespace-pre-wrap bg-transparent px-4 pt-4 pb-2 text-[13px] font-[440] leading-5 text-v2-text-text-base focus:outline-none empty:before:content-['\200B'] [&_[data-mention=file]]:text-syntax-property [&_[data-mention=agent]]:text-syntax-type [&_[data-mention=reference]]:text-syntax-keyword"
+            class="relative z-10 block min-h-[60px] max-h-[180px] w-full overflow-y-auto whitespace-pre-wrap bg-transparent px-4 pt-4 pb-2 text-[13px] font-[440] leading-5 text-v2-text-text-base focus:outline-none [&_[data-mention=file]]:text-syntax-property [&_[data-mention=agent]]:text-syntax-type [&_[data-mention=reference]]:text-syntax-keyword"
             classList={{ "font-mono!": state.mode === "shell", "opacity-50": props.disabled }}
             onInput={(event) => {
+              updatePlaceholder(event.currentTarget)
               if (composing || event.isComposing) return
               pendingCompositionSync = false
               syncEditor(event.currentTarget)
@@ -206,6 +214,11 @@ export function PromptInputV2(props: PromptInputV2Props) {
           />
           <Show when={!props.controller.value()}>
             <div
+              ref={(element) => {
+                placeholder = element
+                if (editor) updatePlaceholder(editor)
+              }}
+              data-slot="prompt-input-placeholder"
               class="pointer-events-none absolute inset-x-0 top-0 px-4 pt-4 text-[13px] font-[440] leading-5 text-v2-text-text-faint"
               classList={{ "font-mono!": state.mode === "shell" }}
             >
