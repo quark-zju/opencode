@@ -1,6 +1,11 @@
 opencode with perf and correctness fixes, intended to make hosting on a RaspberryPi-like device more pleasant.
 
-Performance fixes: Loading a project now takes ~1s, down from ~6s.
+Performance improvements:
+
+- Loading a project now takes ~1s, down from ~6s.
+- "Add project" path completion now feels instant, instead of waiting for seconds.
+
+Performance fixes:
 
 - Removes some ripgreps. Note: this breaks fuzzy path match in "Add project" dialog, and in `@` file list completion. Makes "Add project" much more responsive, and saves ~0.4s per project.
 - Replace some `git` commands with reading `.git` files directly. Saves ~1s.
@@ -8,8 +13,9 @@ Performance fixes: Loading a project now takes ~1s, down from ~6s.
   - Disable GitHub Copilot if it's not enabled. Saves ~0.7s downloading `api.githubcopilot.com/models` (sent as upstream PR
   - Filter the giant list `models.dev` by `enabled_providers`, and process the list more efficiently.
 - Serve `/assets/` as immutable, so browsers can cache them.
+- Switch "Add project" typeahead to a lightweight directory listing endpoint.
 
-Correctness fix:
+Correctness fixes:
 
 - Stops duplicated responses when client clock is ahead.
 - Fixes missing responses when client clock is behind.
