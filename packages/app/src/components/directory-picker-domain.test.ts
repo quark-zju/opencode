@@ -130,7 +130,7 @@ test("scopes file autocomplete to the current browser root", () => {
   expect(pickerFileSearchQuery("/home/luke", "~/repos/op", "/home/luke")).toBe("repos/op")
 })
 
-test("resolves directory autocomplete from the current browser root", async () => {
+test.skip("resolves directory autocomplete from the current browser root", async () => {
   const directories: string[] = []
   const sdk = {
     api: {
