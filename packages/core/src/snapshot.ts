@@ -83,7 +83,7 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Snapshot") {}
 
-const layer = Layer.effect(
+export const gitLayer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const config = yield* Config.Service
@@ -227,14 +227,6 @@ const layer = Layer.effect(
   }),
 )
 
-export const locationLayer = layer.pipe(Layer.provideMerge(Config.locationLayer))
-
-export const node = makeLocationNode({
-  service: Service,
-  layer,
-  deps: [Config.node, FSUtil.node, Git.node, Global.node, Location.node],
-})
-
 export const noopLayer = Layer.succeed(
   Service,
   Service.of({
@@ -246,6 +238,12 @@ export const noopLayer = Layer.succeed(
     checkout: () => Effect.void,
   }),
 )
+
+const layer = noopLayer
+
+export const locationLayer = layer
+
+export const node = makeLocationNode({ service: Service, layer, deps: [] })
 
 function failure(operation: Error["operation"], cause: unknown) {
   if (cause instanceof Error && cause.operation === operation) return cause
