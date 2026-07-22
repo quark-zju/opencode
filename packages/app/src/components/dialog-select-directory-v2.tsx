@@ -29,7 +29,6 @@ import {
 } from "./directory-picker-domain"
 import "./dialog-select-directory-v2.css"
 import { DividerV2 } from "@opencode-ai/ui/v2/divider-v2"
-import { getFilename } from "@opencode-ai/core/util/path"
 
 interface DialogSelectDirectoryV2Props {
   title?: string
@@ -127,14 +126,9 @@ export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
       existing ??
       loads.schedule(`${generation}:${key}`, eager ? "background" : "user", () => {
         if (!activeTreeNavigation(generation, navigation)) return Promise.resolve(undefined)
-        return sdk.api.file
-          .list({ location: { directory: absolute } })
-          .then((result) =>
-            result.data.map((entry) => ({
-              name: getFilename(entry.path.replace(/[\\/]+$/, "")),
-              type: entry.type,
-            })),
-          )
+        return sdk.client.file
+          .browse({ directory: absolute, path: "" })
+          .then((result) => result.data ?? [])
           .catch(() => undefined)
       })
     listings.set(key, request)
