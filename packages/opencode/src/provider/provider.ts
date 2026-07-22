@@ -1400,6 +1400,7 @@ const layer = Layer.effect(
           if (!p || !models) continue
 
           const providerID = ProviderV2.ID.make(p.id)
+          if (enabled && !enabled.has(providerID)) continue
           if (disabled.has(providerID)) continue
 
           const provider = database[providerID]
