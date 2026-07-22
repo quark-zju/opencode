@@ -125,9 +125,16 @@ export function latest<K extends keyof Info>(entries: readonly Entry[], key: K):
     .findLast((entry) => entry.info[key] !== undefined)?.info[key]
 }
 
+export interface ProviderFilter {
+  readonly enabled?: ReadonlySet<string>
+  readonly disabled: ReadonlySet<string>
+}
+
 export interface Interface {
   /** Returns location config documents and supplemental directories from lowest to highest priority. */
   readonly entries: () => Effect.Effect<Entry[]>
+  /** Effective legacy provider filter for this location, when configured. */
+  readonly providerFilter?: ProviderFilter
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Config") {}
@@ -143,6 +150,7 @@ const layer = Layer.effect(
     const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
     const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
     const decodeV1Info = Schema.decodeUnknownOption(ConfigV1.Info, decodeOptions)
+    const providerFilters = new WeakMap<Document, { enabled?: readonly string[]; disabled?: readonly string[] }>()
 
     const loadFile = Effect.fnUntraced(function* (filepath: string) {
       const text = yield* fs.readFileStringSafe(filepath)
@@ -152,13 +160,18 @@ const layer = Layer.effect(
       const input: unknown = parse(text, errors, { allowTrailingComma: true })
       if (errors.length) return
 
-      const info = Option.getOrUndefined(
-        ConfigMigrateV1.isV1(input)
-          ? decodeV1Info(input).pipe(Option.map(ConfigMigrateV1.migrate), Option.flatMap(decodeInfo))
-          : decodeInfo(input),
-      )
+      const legacy = ConfigMigrateV1.isV1(input)
+      const v1 = legacy ? Option.getOrUndefined(decodeV1Info(input)) : undefined
+      if (legacy && !v1) return
+      const info = Option.getOrUndefined(v1 ? decodeInfo(ConfigMigrateV1.migrate(v1)) : decodeInfo(input))
       if (!info) return
-      return new Document({ type: "document", path: filepath, info })
+      const document = new Document({ type: "document", path: filepath, info })
+      if (v1)
+        providerFilters.set(document, {
+          enabled: v1.enabled_providers,
+          disabled: v1.disabled_providers,
+        })
+      return document
     })
 
     const loadDirectory = Effect.fnUntraced(function* (directory: AbsolutePath) {
@@ -209,11 +222,25 @@ const layer = Layer.effect(
         .toReversed()
         .flatMap((config) => config.info.experimental?.policies ?? []),
     )
+    const filters = configs.flatMap((config) => {
+      if (config.type !== "document") return []
+      const filter = providerFilters.get(config)
+      return filter ? [filter] : []
+    })
+    const enabled = filters.findLast((filter) => filter.enabled !== undefined)?.enabled
+    const disabled = filters.findLast((filter) => filter.disabled !== undefined)?.disabled
 
     return Service.of({
       entries: Effect.fn("Config.entries")(function* () {
         return configs
       }),
+      providerFilter:
+        enabled === undefined && disabled === undefined
+          ? undefined
+          : {
+              enabled: enabled && new Set(enabled),
+              disabled: new Set(disabled ?? []),
+            },
     })
   }),
 )
