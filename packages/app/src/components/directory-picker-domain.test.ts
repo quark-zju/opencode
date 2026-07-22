@@ -217,10 +217,10 @@ test("matches the default directory listing when typed search is unsupported", a
 test("searches from an absolute root without a default base", async () => {
   const directories: string[] = []
   const sdk = {
-    api: {
+    client: {
       file: {
-        list: (input: { location?: { directory?: string } }) => {
-          directories.push(input.location?.directory ?? "")
+        browse: (input: { directory?: string }) => {
+          directories.push(input.directory ?? "")
           return Promise.resolve({
             data: [
               { path: "Users/", type: "directory" },
