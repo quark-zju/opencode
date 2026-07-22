@@ -7,6 +7,7 @@ import { ProxyUtil } from "../proxy-util"
 let embeddedUIPromise: Promise<Record<string, string> | null> | undefined
 
 export const UI_UPSTREAM = new URL("https://app.opencode.ai")
+const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 
 export const csp = (hash = "") =>
   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; media-src 'self' data:; connect-src * data: blob:`
@@ -52,9 +53,10 @@ function notFound() {
   return HttpServerResponse.jsonUnsafe({ error: "Not Found" }, { status: 404 })
 }
 
-function embeddedUIResponse(file: string, body: Uint8Array) {
+function embeddedUIResponse(requestPath: string, file: string, body: Uint8Array) {
   const mime = FSUtil.mimeType(file)
   const headers = new Headers({ "content-type": mime })
+  if (requestPath.startsWith("/assets/")) headers.set("cache-control", IMMUTABLE_CACHE_CONTROL)
   if (mime.startsWith("text/html")) {
     headers.set("content-security-policy", cspForHtml(new TextDecoder().decode(body)))
   }
@@ -70,7 +72,7 @@ export function serveEmbeddedUIEffect(
   if (!file) return Effect.succeed(notFound())
 
   return fs.readFile(file).pipe(
-    Effect.map((body) => embeddedUIResponse(file, body)),
+    Effect.map((body) => embeddedUIResponse(requestPath, file, body)),
     Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed(notFound())),
   )
 }
@@ -92,6 +94,7 @@ export function serveUIEffect(
       }),
     )
     const headers = proxyResponseHeaders(response.headers)
+    if (path.startsWith("/assets/")) headers.set("cache-control", IMMUTABLE_CACHE_CONTROL)
 
     if (response.headers["content-type"]?.includes("text/html")) {
       const body = yield* response.text
