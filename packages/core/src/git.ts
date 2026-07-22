@@ -228,9 +228,20 @@ const layer = Layer.effect(
     })
 
     const remote = Effect.fn("Git.remote.get")(function* (repository: Repository, name = "origin") {
-      const result = yield* run(repository.worktree, proc)(["remote", "get-url", name])
-      if (result.exitCode !== 0) return undefined
-      return result.text.trim() || undefined
+      const config = yield* fs
+        .readFileStringSafe(path.join(repository.commonDirectory, "config"))
+        .pipe(Effect.orElseSucceed(() => undefined))
+      if (!config) return undefined
+
+      const section = `[remote "${name}"]`
+      const lines = config.split("\n")
+      const start = lines.findIndex((line) => line.trim() === section)
+      if (start === -1) return undefined
+      const end = lines.findIndex((line, index) => index > start && line.trim().startsWith("["))
+      return lines
+        .slice(start + 1, end === -1 ? undefined : end)
+        .map((line) => line.match(/^\s*url\s*=\s*(.*?)\s*$/)?.[1])
+        .find((url) => url !== undefined && url !== "")
     })
 
     const roots = Effect.fn("Git.history.rootCommits")(function* (repository: Repository) {
