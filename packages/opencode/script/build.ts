@@ -18,6 +18,9 @@ import pkg from "../package.json"
 
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
+const targetOs = process.argv.find((arg) => arg.startsWith("--os="))?.slice("--os=".length)
+const targetArch = process.argv.find((arg) => arg.startsWith("--arch="))?.slice("--arch=".length)
+const targetAbi = process.argv.find((arg) => arg.startsWith("--abi="))?.slice("--abi=".length)
 const skipInstall = process.argv.includes("--skip-install")
 const sourcemapsFlag = process.argv.includes("--sourcemaps")
 const plugin = createSolidTransformPlugin()
@@ -113,26 +116,28 @@ const allTargets: {
   },
 ]
 
-const targets = singleFlag
-  ? allTargets.filter((item) => {
-      if (item.os !== process.platform || item.arch !== process.arch) {
-        return false
-      }
+const targets = allTargets.filter((item) => {
+  if (targetOs && item.os !== targetOs) return false
+  if (targetArch && item.arch !== targetArch) return false
+  if (targetAbi && (item.os !== "linux" || (item.abi ?? "glibc") !== targetAbi)) return false
+  if (!singleFlag) return true
+  if (item.os !== process.platform || item.arch !== process.arch) return false
 
-      // When building for the current platform, prefer a single native binary by default.
-      // Baseline binaries require additional Bun artifacts and can be flaky to download.
-      if (item.avx2 === false) {
-        return baselineFlag
-      }
+  // When building for the current platform, prefer a single native binary by default.
+  // Baseline binaries require additional Bun artifacts and can be flaky to download.
+  if (item.avx2 === false) return baselineFlag
 
-      // also skip abi-specific builds for the same reason
-      if (item.abi !== undefined) {
-        return false
-      }
+  // also skip abi-specific builds for the same reason
+  if (item.abi !== undefined) return false
 
-      return true
-    })
-  : allTargets
+  return true
+})
+
+if (targets.length === 0) {
+  throw new Error(
+    `No build targets match --os=${targetOs ?? "*"} --arch=${targetArch ?? "*"} --abi=${targetAbi ?? "*"}`,
+  )
+}
 
 await $`rm -rf dist`
 
