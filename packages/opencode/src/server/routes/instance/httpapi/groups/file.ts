@@ -97,6 +97,7 @@ export const FilePaths = {
   findFile: "/find/file",
   findSymbol: "/find/symbol",
   list: "/file",
+  browse: "/file/list",
   content: "/file/content",
   status: "/file/status",
 } as const
@@ -173,6 +174,23 @@ export const FileApi = HttpApi.make("file")
         }),
       )
       .middleware(InstanceContextMiddleware)
+      .middleware(WorkspaceRoutingMiddleware)
+      .middleware(Authorization),
+  )
+  .add(
+    HttpApiGroup.make("fileBrowse")
+      .add(
+        HttpApiEndpoint.get("browse", FilePaths.browse, {
+          query: FileQuery,
+          success: described(Schema.Array(LegacyEntry), "Files and directories"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "file.browse",
+            summary: "Browse files",
+            description: "List files and directories without loading a project instance.",
+          }),
+        ),
+      )
       .middleware(WorkspaceRoutingMiddleware)
       .middleware(Authorization),
   )
