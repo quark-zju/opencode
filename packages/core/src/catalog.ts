@@ -27,6 +27,7 @@ type Data = {
 }
 
 export type Draft = {
+  seed: (records: readonly ProviderRecord[]) => void
   provider: {
     list: () => readonly ProviderRecord[]
     get: (providerID: ProviderV2.ID) => ProviderRecord | undefined
@@ -106,6 +107,7 @@ const layer = Layer.effect(
       initial: () => ({ providers: new Map() }),
       draft: (draft) => {
         const result: Draft = {
+          seed: (records) => records.forEach((record) => draft.providers.set(record.provider.id, record)),
           provider: {
             list: () => Array.fromIterable(draft.providers.values()) as ProviderRecord[],
             get: (providerID) => draft.providers.get(providerID),
