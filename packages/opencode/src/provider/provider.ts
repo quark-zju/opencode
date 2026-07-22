@@ -1340,8 +1340,6 @@ const layer = Layer.effect(
         const bridge = yield* EffectBridge.make()
         const cfg = yield* config.get()
         const modelsDev = yield* modelsDevSvc.get()
-        const catalog = mapValues(modelsDev, fromModelsDevProvider)
-        const database = mapValues(catalog, toPublicInfo)
 
         const providers: Record<ProviderV2.ID, Info> = {} as Record<ProviderV2.ID, Info>
         const languages = new Map<string, LanguageModelV3>()
@@ -1362,19 +1360,6 @@ const layer = Layer.effect(
           get: (key: string) => env.get(key),
         }
 
-        function mergeProvider(providerID: ProviderV2.ID, provider: Partial<Info>) {
-          const existing = providers[providerID]
-          if (existing) {
-            // @ts-expect-error
-            providers[providerID] = mergeDeep(existing, provider)
-            return
-          }
-          const match = database[providerID]
-          if (!match) return
-          // @ts-expect-error
-          providers[providerID] = mergeDeep(match, provider)
-        }
-
         // load plugins first so config() hook runs before reading cfg.provider
         const plugins = yield* plugin.list()
 
@@ -1387,6 +1372,25 @@ const layer = Layer.effect(
           if (enabled && !enabled.has(providerID)) return false
           if (disabled.has(providerID)) return false
           return true
+        }
+
+        const catalog = mapValues(
+          pickBy(modelsDev, (_, providerID) => isProviderAllowed(ProviderV2.ID.make(providerID))),
+          fromModelsDevProvider,
+        )
+        const database = mapValues(catalog, toPublicInfo)
+
+        function mergeProvider(providerID: ProviderV2.ID, provider: Partial<Info>) {
+          const existing = providers[providerID]
+          if (existing) {
+            // @ts-expect-error
+            providers[providerID] = mergeDeep(existing, provider)
+            return
+          }
+          const match = database[providerID]
+          if (!match) return
+          // @ts-expect-error
+          providers[providerID] = mergeDeep(match, provider)
         }
 
         for (const hook of plugins) {
