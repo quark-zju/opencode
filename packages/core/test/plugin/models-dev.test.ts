@@ -2,6 +2,7 @@ import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
+import { Config } from "@opencode-ai/core/config"
 import { Integration } from "@opencode-ai/core/integration"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -25,6 +26,7 @@ const layer = AppNodeBuilder.build(LayerNode.group([Catalog.node, Integration.no
   [Location.node, locationLayer],
 ])
 const it = testEffect(layer)
+const config = Config.Service.of({ entries: () => Effect.succeed([]) })
 
 describe("ModelsDevPlugin", () => {
   it.effect("projects models.dev modes as separate models instead of variants", () =>
@@ -87,7 +89,7 @@ describe("ModelsDevPlugin", () => {
           catalog: catalogHost(catalog),
           integration: integrationHost(integrations),
         }),
-      ).pipe(Effect.provideService(ModelsDev.Service, models))
+      ).pipe(Effect.provideService(ModelsDev.Service, models), Effect.provideService(Config.Service, config))
 
       const providerID = ProviderV2.ID.make("acme")
       const base = yield* catalog.model.get(providerID, ModelV2.ID.make("gpt-5.4"))
@@ -122,6 +124,46 @@ describe("ModelsDevPlugin", () => {
         },
       ])
     }),
+  )
+
+  it.effect("filters providers before seeding the catalog", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => {
+        const previous = {
+          path: Flag.OPENCODE_MODELS_PATH,
+          disabled: Flag.OPENCODE_DISABLE_MODELS_FETCH,
+        }
+        Flag.OPENCODE_MODELS_PATH = path.join(import.meta.dir, "fixtures", "models-dev.json")
+        Flag.OPENCODE_DISABLE_MODELS_FETCH = true
+        return previous
+      }),
+      () =>
+        Effect.gen(function* () {
+          const integrations = yield* Integration.Service
+          const catalog = yield* Catalog.Service
+          yield* ModelsDevPlugin.effect(
+            host({
+              catalog: catalogHost(catalog),
+              integration: integrationHost(integrations),
+            }),
+          ).pipe(
+            Effect.provideService(
+              Config.Service,
+              Config.Service.of({
+                entries: () => Effect.succeed([]),
+                providerFilter: { enabled: new Set(["acme"]), disabled: new Set() },
+              }),
+            ),
+          )
+
+          expect((yield* catalog.provider.all()).map((provider) => provider.id)).toEqual(["acme"])
+        }).pipe(Effect.provide(AppNodeBuilder.build(ModelsDev.node))),
+      (previous) =>
+        Effect.sync(() => {
+          Flag.OPENCODE_MODELS_PATH = previous.path
+          Flag.OPENCODE_DISABLE_MODELS_FETCH = previous.disabled
+        }),
+    ),
   )
 
   it.effect("registers key methods for providers with environment variables", () =>
@@ -159,7 +201,7 @@ describe("ModelsDevPlugin", () => {
               connections: [],
             }),
           ])
-        }).pipe(Effect.provide(AppNodeBuilder.build(ModelsDev.node))),
+        }).pipe(Effect.provide(AppNodeBuilder.build(ModelsDev.node)), Effect.provideService(Config.Service, config)),
       (previous) =>
         Effect.sync(() => {
           Flag.OPENCODE_MODELS_PATH = previous.path
