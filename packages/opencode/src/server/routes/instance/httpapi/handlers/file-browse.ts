@@ -16,6 +16,7 @@ export const fileBrowseHandlers = HttpApiBuilder.group(InstanceHttpApi, "fileBro
       return (yield* fs.readDirectoryEntries(target).pipe(Effect.orDie))
         .flatMap((item) => {
           if (item.type !== "file" && item.type !== "directory") return []
+          if (item.type === "directory" && (item.name.startsWith(".") || item.name.startsWith("_"))) return []
           const absolute = path.join(target, item.name)
           return [
             {
@@ -23,7 +24,7 @@ export const fileBrowseHandlers = HttpApiBuilder.group(InstanceHttpApi, "fileBro
               path: path.relative(directory, absolute) + (item.type === "directory" ? path.sep : ""),
               absolute,
               type: item.type,
-              ignored: item.type === "directory" && (item.name.startsWith(".") || item.name.startsWith("_")),
+              ignored: false,
             },
           ]
         })
