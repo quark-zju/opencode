@@ -1,7 +1,9 @@
 import { define } from "./internal"
 import type { ModelV2Info } from "@opencode-ai/sdk/v2/types"
 import { Effect, Stream } from "effect"
+import { Catalog } from "../catalog"
 import { EventV2 } from "../event"
+import { ModelV2 } from "../model"
 import { ModelsDev } from "../models-dev"
 import { ProviderV2 } from "../provider"
 
@@ -116,11 +118,49 @@ function applyModel(
   Object.assign(draft.request.body, input.request?.body ?? {})
 }
 
+function record(item: ModelsDev.Provider): Catalog.ProviderRecord {
+  const providerID = ProviderV2.ID.make(item.id)
+  const provider = ProviderV2.Info.empty(providerID) as ProviderV2.MutableInfo
+  provider.name = item.name
+  provider.api = item.npm
+    ? {
+        type: "aisdk",
+        package: item.npm,
+        url: item.api,
+      }
+    : {
+        type: "native",
+        url: item.api,
+        settings: {},
+      }
+
+  const models = new Map<ModelV2.ID, ModelV2.MutableInfo>()
+  for (const model of Object.values(item.models)) {
+    const baseCost = cost(model.cost)
+    const modelID = ModelV2.ID.make(model.id)
+    const base = ModelV2.Info.empty(providerID, modelID) as ModelV2.MutableInfo
+    applyModel(base, model, { cost: baseCost })
+    models.set(modelID, base)
+    for (const [mode, options] of Object.entries(model.experimental?.modes ?? {})) {
+      const modeID = ModelV2.ID.make(`${model.id}-${mode}`)
+      const variant = ModelV2.Info.empty(providerID, modeID) as ModelV2.MutableInfo
+      applyModel(variant, model, {
+        name: modeName(model, mode),
+        cost: mergeCost(baseCost, options.cost),
+        request: options.provider,
+      })
+      models.set(modeID, variant)
+    }
+  }
+  return { provider, models }
+}
+
 export const ModelsDevPlugin = define({
   id: "models-dev",
   effect: Effect.fn(function* (ctx) {
     const modelsDev = yield* ModelsDev.Service
     const events = yield* EventV2.Service
+    const catalogService = yield* Catalog.Service
     yield* ctx.integration.transform(
       Effect.fn(function* (integrations) {
         const data = yield* modelsDev.get()
@@ -139,44 +179,13 @@ export const ModelsDevPlugin = define({
         }
       }),
     )
-    yield* ctx.catalog.transform(
+    yield* catalogService.transform(
       Effect.fn(function* (catalog) {
-        const data = yield* modelsDev.get()
-        for (const item of Object.values(data)) {
-          const providerID = ProviderV2.ID.make(item.id)
-          catalog.provider.update(providerID, (provider) => {
-            provider.name = item.name
-            provider.api = item.npm
-              ? {
-                  type: "aisdk",
-                  package: item.npm,
-                  url: item.api,
-                }
-              : {
-                  type: "native",
-                  url: item.api,
-                  settings: {},
-                }
-          })
-
-          for (const model of Object.values(item.models)) {
-            const baseCost = cost(model.cost)
-            catalog.model.update(providerID, model.id, (draft) => applyModel(draft, model, { cost: baseCost }))
-            for (const [mode, options] of Object.entries(model.experimental?.modes ?? {})) {
-              catalog.model.update(providerID, `${model.id}-${mode}`, (draft) =>
-                applyModel(draft, model, {
-                  name: modeName(model, mode),
-                  cost: mergeCost(baseCost, options.cost),
-                  request: options.provider,
-                }),
-              )
-            }
-          }
-        }
+        catalog.seed(Object.values(yield* modelsDev.get()).map(record))
       }),
     )
     yield* events.subscribe(ModelsDev.Event.Refreshed).pipe(
-      Stream.runForEach(() => ctx.integration.reload().pipe(Effect.andThen(ctx.catalog.reload()))),
+      Stream.runForEach(() => ctx.integration.reload().pipe(Effect.andThen(catalogService.reload()))),
       Effect.forkScoped({ startImmediately: true }),
     )
   }),
