@@ -52,7 +52,7 @@ export const locationServices = LayerNode.group([
   PluginV2.node,
   PluginInternal.node,
   ProjectCopy.node,
-  ProjectCopy.refreshNode,
+  // ProjectCopy.refreshNode,
   FileSystemSearch.node,
   FileSystem.node,
   Watcher.node,
