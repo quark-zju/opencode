@@ -1,6 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
-import { Effect, Layer, Record, Result, Schema, Context } from "effect"
+import { Effect, Layer, Option, Record, Result, Schema, Context } from "effect"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Global } from "@opencode-ai/core/global"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -54,16 +54,29 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const fsys = yield* FSUtil.Service
     const decode = Schema.decodeUnknownOption(Info)
+    let cache: { key: string; data: Record<string, Info> } | undefined
 
     const all = Effect.fn("Auth.all")(function* () {
-      if (process.env.OPENCODE_AUTH_CONTENT) {
+      const content = process.env.OPENCODE_AUTH_CONTENT
+      if (content) {
         try {
-          return JSON.parse(process.env.OPENCODE_AUTH_CONTENT)
+          const key = `env:${content}`
+          if (cache?.key === key) return cache.data
+          const data = JSON.parse(content)
+          cache = { key, data }
+          return data
         } catch (err) {}
       }
 
+      const stat = yield* fsys.stat(file).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      const key = stat
+        ? `file:${Option.getOrElse(stat.mtime, () => new Date(0)).getTime()}:${stat.size}`
+        : "file:missing"
+      if (cache?.key === key) return cache.data
       const data = (yield* fsys.readJson(file).pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>
-      return Record.filterMap(data, (value) => Result.fromOption(decode(value), () => undefined))
+      const decoded = Record.filterMap(data, (value) => Result.fromOption(decode(value), () => undefined))
+      cache = { key, data: decoded }
+      return decoded
     })
 
     const get = Effect.fn("Auth.get")(function* (providerID: string) {
@@ -72,20 +85,22 @@ const layer = Layer.effect(
 
     const set = Effect.fn("Auth.set")(function* (key: string, info: Info) {
       const norm = key.replace(/\/+$/, "")
-      const data = yield* all()
+      const data = { ...(yield* all()) }
       if (norm !== key) delete data[key]
       delete data[norm + "/"]
       yield* fsys
         .writeJson(file, { ...data, [norm]: info }, 0o600)
         .pipe(Effect.mapError(fail("Failed to write auth data")))
+      cache = undefined
     })
 
     const remove = Effect.fn("Auth.remove")(function* (key: string) {
       const norm = key.replace(/\/+$/, "")
-      const data = yield* all()
+      const data = { ...(yield* all()) }
       delete data[key]
       delete data[norm]
       yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
+      cache = undefined
     })
 
     return Service.of({ get, all, set, remove })
