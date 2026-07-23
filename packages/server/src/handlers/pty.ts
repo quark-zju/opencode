@@ -149,12 +149,11 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
 
           const url = new URL(ctx.request.url, "http://localhost")
           const ticket = url.searchParams.get(PTY_CONNECT_TICKET_QUERY)
-          if (ticket) {
-            const valid = isAllowedRequestOrigin(ctx.request.headers.origin, ctx.request.headers.host, cors)
+          const valid =
+            ticket && isAllowedRequestOrigin(ctx.request.headers.origin, ctx.request.headers.host, cors)
               ? yield* tickets.consume({ ticket, ptyID: ctx.params.ptyID, ...(yield* ticketScope) })
               : false
-            if (!valid) return HttpServerResponse.empty({ status: 403 })
-          }
+          if (!valid) return HttpServerResponse.empty({ status: 403 })
           const parsedCursor = url.searchParams.get("cursor")
           const cursorNumber = parsedCursor === null ? undefined : Number(parsedCursor)
           const cursor =
