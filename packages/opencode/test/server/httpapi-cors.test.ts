@@ -60,7 +60,7 @@ describe("HttpApi CORS", () => {
     }),
   )
 
-  it.live("adds CORS headers to unauthorized responses", () =>
+  it.live("does not allow app.opencode.ai to make cross-origin requests", () =>
     Effect.gen(function* () {
       const handler = HttpRouter.toWebHandler(
         HttpApiApp.createRoutes().pipe(
@@ -78,7 +78,7 @@ describe("HttpApi CORS", () => {
       )
 
       expect(response.status).toBe(401)
-      expect(response.headers.get("access-control-allow-origin")).toBe("https://app.opencode.ai")
+      expect(response.headers.get("access-control-allow-origin")).toBeNull()
     }),
   )
 
