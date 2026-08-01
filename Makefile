@@ -18,7 +18,6 @@ deploy: deploy-linux-arm
 build: build-linux-arm
 
 push:
-	git fetch origin dev:refs/remotes/origin/dev
 	git fetch myfork dev:refs/remotes/myfork/dev perf:refs/remotes/myfork/perf
 	@set -eu; \
 	old_dev=$$(git rev-parse refs/remotes/myfork/dev); \
