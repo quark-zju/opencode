@@ -18,7 +18,23 @@ deploy: deploy-linux-arm
 build: build-linux-arm
 
 push:
-	git push --no-verify --set-upstream myfork HEAD:perf
+	git fetch origin dev:refs/remotes/origin/dev
+	git fetch myfork dev:refs/remotes/myfork/dev perf:refs/remotes/myfork/perf
+	@set -eu; \
+	old_dev=$$(git rev-parse refs/remotes/myfork/dev); \
+	upstream=$$(git merge-base "$$old_dev" refs/remotes/origin/dev); \
+	tag=patched-$$(git show -s --format=%cs "$$upstream"); \
+	tag_ref=refs/tags/$$tag; \
+	existing=$$(git rev-parse --verify "$$tag_ref^{commit}" 2>/dev/null || true); \
+	if [ -n "$$existing" ] && [ "$$existing" != "$$old_dev" ]; then \
+		echo "$$tag already points to $$existing, expected $$old_dev" >&2; \
+		exit 1; \
+	fi; \
+	if [ -z "$$existing" ]; then git tag "$$tag" "$$old_dev"; fi; \
+	git push --no-verify --force-with-lease=refs/heads/perf myfork \
+		"$$tag_ref:$$tag_ref" \
+		refs/remotes/origin/dev:refs/heads/dev \
+		HEAD:refs/heads/perf
 
 pull:
 	git fetch myfork; git checkout myfork/perf
