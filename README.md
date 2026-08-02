@@ -1,31 +1,43 @@
-opencode with perf and correctness fixes, intended to make hosting on a RaspberryPi-like device more pleasant.
+This is a fork of [opencode](https://github.com/anomalyco/opencode) with fixes so I can self-host comfortably on a low-end device (Orange Pi).
 
-Performance improvements:
+## Performance
 
-- Loading a project now takes ~1s, down from ~6s.
-- "Add project" path completion now feels instant, instead of waiting for seconds.
+When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju/leash) on the Pi:
 
-Performance fixes:
+* “Add project” path completion now feels instantaneous, down from 20+ seconds.
+* Loading an uncached project now takes less than one second, down from 6+ seconds.
+  * Note: configure `enabled_providers` to a small subset to fully benefit from this optimization.
+* `/assets/` URLs are now served as immutable, so browsers can cache them instead of re-downloading several MBs on every page load.
 
-- Removes some ripgreps. Note: this breaks fuzzy path match in "Add project" dialog, and in `@` file list completion. Makes "Add project" much more responsive, and saves ~0.4s per project.
-- Replace some `git` commands with reading `.git` files directly. Saves ~1s.
-- Reduces `models.dev` overhead (requires configuring `enabled_providers`):
-  - Disable GitHub Copilot if it's not enabled. Saves ~0.7s downloading `api.githubcopilot.com/models` (sent as upstream PR
-  - Filter the giant list `models.dev` by `enabled_providers`, and process the list more efficiently.
-- Serve `/assets/` as immutable, so browsers can cache them.
-- Switch "Add project" typeahead to a lightweight directory listing endpoint.
+## Correctness
 
-Correctness fixes:
+* Client clocks running ahead no longer cause multiple responses.
+* Server clocks running ahead no longer cause requests to be ignored.
+* CJK input methods now work correctly.
 
-- Stops duplicated responses when client clock is ahead.
-- Fixes missing responses when client clock is behind.
-- Fixed IME (input method) pre-edit issues.
+## Security
 
-Context optimization:
+* The terminal endpoint no longer accepts authentication credentials through the URL.
 
-- Reduces GPT system prompt and tool descriptions from ~6k to ~2k tokens.
+## Cost
 
-背景：我在 Orange Pi 上运行 `opencode web`，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开未缓存的新项目时感觉很慢（可能有 10 秒钟），比 `kimi web`（也在同一设备的沙箱内）慢很多。strace 发现 opencode 可能有一些性能上不合理的地方，比如全项目或者全用户扫文件，多次跑没有太大意义的 git 命令等。本 repo 可能采用比较激进的手段优化在慢系统上的性能。修改也不一定适合上游。
+* The GPT system prompt, including tool definitions, has been reduced from ~6k tokens to ~2k.
+
+## Why maintain a fork?
+
+The opencode upstream appears to be overwhelmed by the volume of incoming PRs. I submitted polished fixes but received no response, so I decided to maintain a fork.
+
+## Why opencode?
+
+I use several coding agents, including kimi-code web, the Codex app, Zed, and opencode. My [Git hook](https://github.com/quark-zju/dotfiles/blob/6283025595807179fe6c0c81fc9458756f1dd3e5/.config/git-hooks/prepare-commit-msg) supports multiple tools.
+
+* **opencode:** I like the context button tooltip showing the current cost, the ability to use different models for subagents, and the official OpenAI subscription support.
+* **kimi-code web:** I like how it presents reasoning blocks: it shows only the final paragraph by default, with the full content available in a side panel.
+* **Codex:** I like how it collapses intermediate details and shows only the final summary after each turn.
+
+背景：我在 Orange Pi 上运行 opencode web，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开未缓存的新项目时很慢（可能有 10 秒钟），比 kimi web（也在同一设备的沙箱内）慢很多。调查发现 opencode 在很多地方缺乏性能考虑，比如全项目或者全用户扫文件，多次跑没有太大意义的 git 命令，下载 models.dev 大 JSON 多次验证并做无用的序列化+反序列化等。
+
+本 repo 最初修正了性能问题，使得 Pi 设备上运行相对流畅。后续包括了一些其他修改，如时差修正，输入法修正，以及提示词优化。
 
 ---
 
