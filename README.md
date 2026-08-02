@@ -1,6 +1,8 @@
 This is a fork of [opencode](https://github.com/anomalyco/opencode) with fixes so I can self-host comfortably on a low-end device (Orange Pi).
 
-## Performance
+## Example changes in this fork
+
+### Performance
 
 When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju/leash) on the Pi:
 
@@ -9,17 +11,17 @@ When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju
   * Note: configure `enabled_providers` to a small subset to fully benefit from this optimization.
 * `/assets/` URLs are now served as immutable, so browsers can cache them instead of re-downloading several MBs on every page load.
 
-## Correctness
+### Correctness
 
 * Client clocks running ahead no longer cause multiple responses.
 * Server clocks running ahead no longer cause requests to be ignored.
 * CJK input methods now work correctly.
 
-## Security
+### Security
 
 * The terminal endpoint no longer accepts authentication credentials through the URL.
 
-## Cost
+### Cost
 
 * The GPT system prompt, including tool definitions, has been reduced from ~6k tokens to ~2k.
 
