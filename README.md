@@ -25,17 +25,21 @@ When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju
 
 * The GPT system prompt, including tool definitions, has been reduced from ~6k tokens to ~2k.
 
-## Why maintain a fork?
+## Whys
+
+### Why maintain a fork?
 
 The opencode upstream appears to be overwhelmed by the volume of incoming PRs. I submitted polished fixes but received no response, so I decided to maintain a fork.
 
-## Why opencode?
+### Why opencode?
 
 I use several coding agents, including kimi-code web, the Codex app, Zed, and opencode. My [Git hook](https://github.com/quark-zju/dotfiles/blob/6283025595807179fe6c0c81fc9458756f1dd3e5/.config/git-hooks/prepare-commit-msg) supports multiple tools.
 
 * **opencode:** I like the context button tooltip showing the current cost, the ability to use different models for subagents, and the official OpenAI subscription support.
 * **kimi-code web:** I like how it presents reasoning blocks: it shows only the final paragraph by default, with the full content available in a side panel.
 * **Codex:** I like how it collapses intermediate details and shows only the final summary after each turn.
+
+---
 
 背景：我在 Orange Pi 上运行 opencode web，文件系统在 SD 卡上，并运行于 leash fuse 沙箱内，比普通机器慢许多。opencode 在打开未缓存的新项目时很慢（可能有 10 秒钟），比 kimi web（也在同一设备的沙箱内）慢很多。调查发现 opencode 在很多地方缺乏性能考虑，比如全项目或者全用户扫文件，多次跑没有太大意义的 git 命令，下载 models.dev 大 JSON 多次验证并做无用的序列化+反序列化等。
 
