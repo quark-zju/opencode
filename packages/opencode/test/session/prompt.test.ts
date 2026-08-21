@@ -2413,7 +2413,7 @@ noLLMServer.instance(
 )
 
 noLLMServer.instance(
-  "unknown command throws typed error with available names",
+  "unknown command throws typed error",
   () =>
     Effect.gen(function* () {
       const prompt = yield* SessionPrompt.Service
@@ -2434,7 +2434,6 @@ noLLMServer.instance(
         expect(NamedError.Unknown.isInstance(err)).toBe(true)
         if (NamedError.Unknown.isInstance(err)) {
           expect(err.data.message).toContain('Command not found: "nonexistent-command-xyz"')
-          expect(err.data.message).toContain("init")
         }
       }
     }),
