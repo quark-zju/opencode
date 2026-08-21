@@ -11,12 +11,6 @@ When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju
   * Note: configure `enabled_providers` to a small subset to fully benefit from this optimization.
 * `/assets/` URLs are now served as immutable, so browsers can cache them instead of re-downloading several MBs on every page load.
 
-### Correctness
-
-* Client clocks running ahead no longer cause multiple responses.
-* Server clocks running ahead no longer cause requests to be ignored.
-* CJK input methods now work correctly.
-
 ### Security
 
 * The terminal endpoint no longer accepts authentication credentials through the URL.
@@ -24,6 +18,13 @@ When running `opencode web` inside a [FUSE sandbox](https://github.com/quark-zju
 ### Cost
 
 * The GPT system prompt, including tool definitions, has been reduced from ~6k tokens to ~2k.
+
+### Later fixed upstream
+
+These fixes were present when this fork began, but upstream later implemented independent fixes for the same issues:
+
+* Message ordering no longer depends on clock-derived ID ordering, preventing duplicate responses and ignored requests when clocks or IDs are out of order.
+* CJK input methods preserve IME composition without premature submission or reconciliation.
 
 ## Whys
 
