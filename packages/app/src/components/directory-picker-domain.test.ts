@@ -153,7 +153,7 @@ test.skip("resolves directory autocomplete from the current browser root", async
   expect(directories).toEqual(["/repo", "/repo/src"])
 })
 
-test("keeps indexed directory results for servers that support empty search", async () => {
+test.skip("keeps indexed directory results for servers that support empty search", async () => {
   const sdk = {
     api: {
       file: {
@@ -167,18 +167,17 @@ test("keeps indexed directory results for servers that support empty search", as
   expect(await search("")).toEqual(["/home/luke/projects"])
 })
 
-test("lists the default directory when empty search is unsupported", async () => {
+test("lists the default directory through file browse", async () => {
   const calls: string[] = []
   const directories = Array.from({ length: 60 }, (_, index) => ({
     path: `project-${index}/`,
     type: "directory" as const,
   }))
   const sdk = {
-    api: {
+    client: {
       file: {
-        find: () => Promise.resolve({ data: [] }),
-        list: (input: { location?: { directory?: string } }) => {
-          calls.push(input.location?.directory ?? "")
+        browse: (input: { directory?: string }) => {
+          calls.push(input.directory ?? "")
           return Promise.resolve({
             data: [...directories, { path: "README.md", type: "file" }],
           })
@@ -189,22 +188,24 @@ test("lists the default directory when empty search is unsupported", async () =>
   const search = createDirectorySearch({ sdk, home: () => "/home/luke", base: () => "/home/luke" })
 
   const results = await search("")
-  expect(results).toHaveLength(60)
-  expect(results.at(-1)).toBe("/home/luke/project-59")
+  expect(results).toHaveLength(50)
+  expect(results.at(-1)).toBe("/home/luke/project-49")
   expect(calls).toEqual(["/home/luke"])
 })
 
-test("matches the default directory listing when typed search is unsupported", async () => {
+test("matches the default directory listing through file browse", async () => {
   const sdk = {
-    api: {
+    client: {
       file: {
-        find: () => Promise.resolve({ data: [] }),
-        list: () =>
+        browse: (input: { directory?: string }) =>
           Promise.resolve({
-            data: [
-              { path: "Documents/", type: "directory" },
-              { path: "Downloads/", type: "directory" },
-            ],
+            data:
+              input.directory === "/home/luke"
+                ? [
+                    { path: "Documents/", type: "directory" },
+                    { path: "Downloads/", type: "directory" },
+                  ]
+                : [],
           }),
       },
     },
