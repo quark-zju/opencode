@@ -309,7 +309,7 @@ function renderPromptInputV2Editor(editor: HTMLDivElement, prompt: PromptInputV2
   editor.replaceChildren(
     ...prompt.flatMap<Node>((part) => {
       if (part.type === "image") return []
-      if (part.type === "text") return [document.createTextNode(part.content)]
+      if (part.type === "text") return part.content ? [document.createTextNode(part.content)] : []
       const mention = document.createElement("span")
       mention.textContent = part.content
       mention.contentEditable = "false"

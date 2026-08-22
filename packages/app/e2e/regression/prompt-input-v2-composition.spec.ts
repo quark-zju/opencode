@@ -41,12 +41,18 @@ test("does not persist IME pre-edit text before composition ends", async ({ page
   const input = composer.locator('[data-component="prompt-input"]')
   const placeholder = composer.locator('[data-slot="prompt-input-placeholder"]')
   const send = composer.getByRole("button", { name: "Send" })
+  const emptyTextNodes = () =>
+    input.evaluate(
+      (element) => Array.from(element.childNodes).filter((node) => node.nodeType === 3 && node.textContent === "").length,
+    )
   await expectAppVisible(composer)
+  await expect.poll(emptyTextNodes).toBe(0)
 
   await input.fill("seed")
   await input.press("ControlOrMeta+A")
   await input.press("Backspace")
   await expect(input).toBeEmpty()
+  await expect.poll(emptyTextNodes).toBe(0)
   await expect(placeholder).toBeVisible()
   await expect(send).toBeDisabled()
   const emptyContent = await input.evaluate((element) => getComputedStyle(element, "::before").content)
