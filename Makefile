@@ -1,4 +1,5 @@
 LINUX_ARM_TARGET := packages/opencode/dist/opencode-linux-arm64/bin/opencode
+FORCE_PUSH_TAG ?= 0
 
 .PHONY: clean build-linux-arm deploy-linux-arm build deploy push pull prof
 
@@ -25,13 +26,19 @@ push:
 	tag=patched-$$(git show -s --format=%cs "$$upstream"); \
 	tag_ref=refs/tags/$$tag; \
 	existing=$$(git rev-parse --verify "$$tag_ref^{commit}" 2>/dev/null || true); \
-	if [ -n "$$existing" ] && [ "$$existing" != "$$old_perf" ]; then \
+	if [ "$(FORCE_PUSH_TAG)" = "1" ]; then \
+		git tag -f "$$tag" "$$old_perf"; \
+		tag_refspec=+$$tag_ref:$$tag_ref; \
+	elif [ -n "$$existing" ] && [ "$$existing" != "$$old_perf" ]; then \
 		echo "$$tag already points to $$existing, expected $$old_perf" >&2; \
+		echo "set FORCE_PUSH_TAG=1 to move and force-push the tag" >&2; \
 		exit 1; \
+	else \
+		if [ -z "$$existing" ]; then git tag "$$tag" "$$old_perf"; fi; \
+		tag_refspec=$$tag_ref:$$tag_ref; \
 	fi; \
-	if [ -z "$$existing" ]; then git tag "$$tag" "$$old_perf"; fi; \
 	git push --no-verify --force-with-lease=refs/heads/perf myfork \
-		"$$tag_ref:$$tag_ref" \
+		"$$tag_refspec" \
 		refs/remotes/origin/dev:refs/heads/dev \
 		HEAD:refs/heads/perf
 
